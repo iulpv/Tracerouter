@@ -1,10 +1,10 @@
 import socket
 import time
-from scapy.sendrecv import sr1
+from scapy.sendrecv import sr1, sr
 from scapy.layers.inet import IP, TCP, ICMP, UDP
 from scapy.all import Raw
 from scapy.volatile import RandShort, RandString
-from scapy.layers.inet6 import IPv6
+from scapy.layers.inet6 import IPv6, ICMPv6EchoRequest
 
 
 class Traceroute:
@@ -31,11 +31,15 @@ class Traceroute:
             time.sleep(self.interval)
 
     def create_tcp_pack(self, num):
+        if self.port is None:
+            raise ValueError("введите порт")
         if ':' in self.ip:
             return IPv6(dst=self.ip, hlim=num) / TCP(dport=self.port) / Raw(RandString(size=self.size))
         return IP(dst=self.ip, ttl=num) / TCP(dport=self.port) / Raw(RandString(size=self.size))
 
     def create_udp_pack(self, num):
+        if self.port is None:
+            raise ValueError("введите порт")
         if ':' in self.ip:
             return IPv6(dst=self.ip, hlim=num) / UDP(dport=self.port, sport=RandShort()) / Raw(
                 RandString(size=self.size))
@@ -43,7 +47,7 @@ class Traceroute:
 
     def create_icmp_pack(self, num):
         if ':' in self.ip:
-            return IPv6(dst=self.ip, hlim=num) / ICMP() / Raw(RandString(size=self.size))
+            return IPv6(dst=self.ip, hlim=num, src=RandShort()) / ICMPv6EchoRequest() / Raw(RandString(size=self.size))
         return IP(dst=self.ip, ttl=num) / ICMP() / Raw(RandString(size=self.size))
 
     def check_protocol(self):
@@ -66,11 +70,11 @@ class Traceroute:
         if ans is None:
             return 0
         ip = ans.src
-        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        s.connect((ip, self.port))
-        s.setsockopt(socket.IPPROTO_IP, 10, 2)
-        try:
-            s.send(b'#' * 999999)
-        except socket.error:
-            max_mtu = s.getsockopt(socket.IPPROTO_IP, 14)
-            return max_mtu
+        for i in range(5000, 1, -100):
+            a = sr1(IP(dst=ip, flags="DF") / ICMP() / Raw(RandString(size=i)), verbose=0, timeout=2) #проверять через таймаут и если none то это ответ mtu
+            if a is None:
+                return i
+        return ''
+
+
+

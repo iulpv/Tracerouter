@@ -5,7 +5,7 @@ def create_parser():
     parser = argparse.ArgumentParser()
     parser.add_argument('IP_ADDRESS', help='ip', type=str, action='store')
     parser.add_argument('-t', default=2, type=float, help='timeout (по умолчанию 2с)')
-    parser.add_argument('-p', type=int, action='store', help='port (для tcp или udp)', required=True)
+    parser.add_argument('-p', type=int, action='store', help='port (для tcp или udp)', required=False)
     parser.add_argument('-ttl', type=int, action='store', default=30, help='максимальное количество запросов')
     parser.add_argument('protocol', type=str, action='store', help='протокол {tcp|udp|icmp}',
                         choices=['tcp', 'udp', 'icmp'])
