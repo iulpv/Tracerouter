@@ -1,4 +1,3 @@
-
 import time
 from scapy.sendrecv import sr1, sr
 from scapy.layers.inet import IP, TCP, ICMP, UDP
@@ -9,7 +8,6 @@ from scapy.layers.inet6 import IPv6, ICMPv6EchoRequest
 
 class Traceroute:
     def __init__(self, input_data):
-        print(input_data, type(input_data))
         self.ip = input_data.IP_ADDRESS
         self.timeout = input_data.t
         self.protocol = input_data.protocol
@@ -48,7 +46,7 @@ class Traceroute:
 
     def create_icmp_pack(self, num):
         if ':' in self.ip:
-            return IPv6(dst=self.ip, hlim=num, src=RandShort()) / ICMPv6EchoRequest() / Raw(RandString(size=self.size))
+            return IPv6(dst=self.ip, hlim=num) / ICMPv6EchoRequest() / Raw(RandString(size=self.size))
         return IP(dst=self.ip, ttl=num) / ICMP() / Raw(RandString(size=self.size))
 
     def check_protocol(self):
@@ -71,13 +69,17 @@ class Traceroute:
         if ans is None:
             return 0
         ip = ans.src
-        for i in range(5000, 1, -100):
-            a = sr1(IP(dst=ip, flags="DF") / ICMP() / Raw(RandString(size=i)), verbose=0, timeout=2) #проверять через таймаут и если none то это ответ mtu
-            if a.code != 4:
+        for i in range(100, 10000, 100):
+            a = sr1(IP(dst=ip, flags="DF") / ICMP() / Raw(RandString(size=i)), verbose=0, timeout=2)
+            if a is None:
+                return '*'
+            if a.flags == "MF":
                 return i
+            #print(a.show())
             # if a is None:
-            #     return i
-        return ''
-
-
-
+        #     #     return i
+        # return ''
+        # a, b = sr(IP(dst=ip, flags="DF") / ICMP() / Raw(RandString(size=10000)),
+        #           verbose=0)  # проверять через таймаут и если none то это ответ mtu
+        # print(a.show())
+        # print()
