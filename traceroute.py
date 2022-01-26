@@ -70,23 +70,19 @@ class Traceroute:
         print(f'{num_ttl} {ans.src} {int(elapsed_time * 1000)}ms {mtu}')
 
     def define_mtu(self, ip):
-        for i in range(5000, 100, -10):
+        l = 100
+        r = 5000
+        while l <= r:
+            mid = l + (r - l) // 2
+            if l == r:
+                return mid
             if ':' in ip:
-                p = IPv6(dst=ip) / ICMPv6EchoRequest() / ('x' * i)
+                p = IPv6(dst=ip) / ICMPv6EchoRequest() / ('x' * mid)
             else:
-                p = IP(dst=ip, flags="DF") / ICMP() / ('x' * i)
+                p = IP(dst=ip, flags="DF") / ICMP() / ('x' * mid)
             try:
                 sendp(p, verbose=0)
             except OSError:
-                pass
+                r = mid - 1
             else:
-                return i
-# у ipv4 20, ipv6 - 40
-
-            # if a is None:
-        #     #     return i
-        # return ''
-        # a, b = sr(IP(dst=ip, flags="DF") / ICMP() / Raw(RandString(size=10000)),
-        #           verbose=0)  # проверять через таймаут и если none то это ответ mtu
-        # print(a.show())
-        # print()
+                l = mid + 1
