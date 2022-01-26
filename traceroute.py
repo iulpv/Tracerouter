@@ -1,5 +1,7 @@
+from scapy.config import conf
+conf.auto_fragment = False
 import time
-from scapy.sendrecv import sr1, sr
+from scapy.sendrecv import sr1, sr, sendp
 from scapy.layers.inet import IP, TCP, ICMP, UDP
 from scapy.all import Raw
 from scapy.volatile import RandShort, RandString
@@ -23,7 +25,9 @@ class Traceroute:
             start_time = time.perf_counter()
             ans = sr1(pack(num=num_ttl), verbose=0, timeout=self.timeout, retry=self.retry)
             elapsed_time = time.perf_counter() - start_time
-            mtu = self.define_mtu(ans)
+            mtu = ''
+            if ans is not None:
+                mtu = self.define_mtu(ans.src)
             self.get_ans(ans=ans, elapsed_time=elapsed_time, num_ttl=num_ttl, mtu=mtu)
             if ans and ans.src == self.ip:
                 break
@@ -65,17 +69,20 @@ class Traceroute:
             return
         print(f'{num_ttl} {ans.src} {int(elapsed_time * 1000)}ms {mtu}')
 
-    def define_mtu(self, ans):
-        if ans is None:
-            return 0
-        ip = ans.src
-        for i in range(100, 10000, 100):
-            a = sr1(IP(dst=ip, flags="DF") / ICMP() / Raw(RandString(size=i)), verbose=0, timeout=2)
-            if a is None:
-                return '*'
-            if a.flags == "MF":
+    def define_mtu(self, ip):
+        for i in range(5000, 100, -10):
+            if ':' in ip:
+                p = IPv6(dst=ip) / ICMPv6EchoRequest() / ('x' * i)
+            else:
+                p = IP(dst=ip, flags="DF") / ICMP() / ('x' * i)
+            try:
+                sendp(p, verbose=0)
+            except OSError:
+                pass
+            else:
                 return i
-            #print(a.show())
+# у ipv4 20, ipv6 - 40
+
             # if a is None:
         #     #     return i
         # return ''
