@@ -1,7 +1,8 @@
 from scapy.config import conf
+
 conf.auto_fragment = False
 import time
-from scapy.sendrecv import sr1, sr, sendp
+from scapy.sendrecv import sr1, sr, sendp, sniff, send
 from scapy.layers.inet import IP, TCP, ICMP, UDP
 from scapy.all import Raw
 from scapy.volatile import RandShort, RandString
@@ -28,6 +29,7 @@ class Traceroute:
             mtu = ''
             if ans is not None:
                 mtu = self.define_mtu(ans.src)
+                mtu = self.check_mtu(mtu, ans.src)
             self.get_ans(ans=ans, elapsed_time=elapsed_time, num_ttl=num_ttl, mtu=mtu)
             if ans and ans.src == self.ip:
                 break
@@ -75,14 +77,27 @@ class Traceroute:
         while l <= r:
             mid = l + (r - l) // 2
             if l == r:
-                return mid
+                return mid - 1
             if ':' in ip:
                 p = IPv6(dst=ip) / ICMPv6EchoRequest() / ('x' * mid)
             else:
                 p = IP(dst=ip, flags="DF") / ICMP() / ('x' * mid)
             try:
-                sendp(p, verbose=0)
+                send(p, verbose=0)
             except OSError:
                 r = mid - 1
             else:
                 l = mid + 1
+
+    def check_mtu(self, mtu, ip):
+        if ':' in ip:
+            p = IPv6(dst=ip) / ICMPv6EchoRequest() / ('x' * mtu)
+        else:
+            p = IP(dst=ip, flags="DF") / ICMP() / ('x' * mtu)
+        ans = sr1(p, verbose=0, retry=3)
+        if ans is None:
+            return ''
+        if ans.type == 0:
+            return mtu
+        else:
+            return '*'
