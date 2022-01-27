@@ -78,10 +78,7 @@ class Traceroute:
             mid = l + (r - l) // 2
             if l == r:
                 return mid - 1
-            if ':' in ip:
-                p = IPv6(dst=ip) / ICMPv6EchoRequest() / ('x' * mid)
-            else:
-                p = IP(dst=ip, flags="DF") / ICMP() / ('x' * mid)
+            p = self.create_pack(ip, mid)
             try:
                 send(p, verbose=0)
             except OSError:
@@ -90,10 +87,7 @@ class Traceroute:
                 l = mid + 1
 
     def check_mtu(self, mtu, ip):
-        if ':' in ip:
-            p = IPv6(dst=ip) / ICMPv6EchoRequest() / ('x' * mtu)
-        else:
-            p = IP(dst=ip, flags="DF") / ICMP() / ('x' * mtu)
+        p = self.create_pack(ip, mtu)
         ans = sr1(p, verbose=0, retry=3)
         if ans is None:
             return ''
@@ -101,3 +95,10 @@ class Traceroute:
             return mtu
         else:
             return '*'
+
+    def create_pack(self, ip, size):
+        if ':' in ip:
+            p = IPv6(dst=ip) / ICMPv6EchoRequest() / ('x' * size)
+        else:
+            p = IP(dst=ip, flags="DF") / ICMP() / ('x' * size)
+        return p
