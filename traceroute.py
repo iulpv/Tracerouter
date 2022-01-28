@@ -29,7 +29,6 @@ class Traceroute:
             mtu = ''
             if ans is not None:
                 mtu = self.define_mtu(ans.src)
-                mtu = self.check_mtu(mtu, ans.src)
             self.get_ans(ans=ans, elapsed_time=elapsed_time, num_ttl=num_ttl, mtu=mtu)
             if ans and ans.src == self.ip:
                 break
@@ -76,9 +75,10 @@ class Traceroute:
         r = 5000
         while l <= r:
             mid = l + (r - l) // 2
-            if l == r:
-                return mid - 1
             p = self.create_pack(ip, mid)
+            if l == r:
+                mid -= 1
+                return self.check_mtu(mid, ip)
             try:
                 send(p, verbose=0)
             except OSError:
@@ -89,10 +89,9 @@ class Traceroute:
     def check_mtu(self, mtu, ip):
         p = self.create_pack(ip, mtu)
         ans = sr1(p, verbose=0, retry=3)
-        if ans is None:
-            return ''
-        if ans.type == 0:
-            return mtu
+        if ans is not None:
+            if ans.type == 0:
+                return mtu
         else:
             return '*'
 
